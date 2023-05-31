@@ -6,28 +6,27 @@
 typedef struct node {
     int value;
     struct node* next;
-} node_t;
+    struct node* prev;
+}node_t;
 
-typedef struct slist {
+typedef struct dlist {
     node_t* head;
     node_t* tail;
     int size;
-} slist_t;
+}dlist_t;
 
-slist_t* makeSlist() {
-    slist_t* newList = (slist_t*)malloc(sizeof(slist_t));
+dlist_t* makeDlist() {
+    dlist_t* newList = (dlist_t*)malloc(sizeof(dlist_t));
     if(newList == NULL) {
         return NULL;
     }
-
     newList->head = NULL;
     newList->tail = NULL;
     newList->size = 0;
-
     return newList;
 }
 
-int search(slist_t* list, int value) {
+int search(dlist_t* list, int value) {
     node_t* cur = list->head;
     int pos = 1;
     while(cur != NULL) {
@@ -41,22 +40,30 @@ int search(slist_t* list, int value) {
 }
 
 // insert the element at the head
-void insertHead(slist_t* list, int value) {
+void insertHead(dlist_t* list, int value) {
     node_t* newNode = (node_t*)malloc(sizeof(node_t));
     newNode->value = value;
     newNode->next = list->head;
+    newNode->prev = NULL;
+
+    if(list->head != NULL) {
+        list->head->prev = newNode;
+    }
+
     list->head = newNode;
     list->size++;
+
     if(list->tail == NULL) {
         list->tail = newNode;
     }
 }
 
 // insert the element at the tail
-void insertTail(slist_t* list, int value) {
+void insertTail(dlist_t* list, int value) {
     node_t* newNode = (node_t*)malloc(sizeof(node_t));
     newNode->value = value;
     newNode->next = NULL;
+    newNode->prev = list->tail;
 
     if(list->tail == NULL) {
         list->head = newNode;
@@ -70,10 +77,11 @@ void insertTail(slist_t* list, int value) {
 }
 
 // insert in the middle 
-void insertMiddle(slist_t* list, int value, int position) {
+void insertMiddle(dlist_t* list, int value, int position) {
     node_t* newNode = (node_t*)malloc(sizeof(node_t));
     newNode->value = value;
     newNode->next = NULL;
+    newNode->prev = NULL;
 
     if(position > list->size + 1 || position < 1) {
         printf("Invalid position\n");
@@ -95,13 +103,15 @@ void insertMiddle(slist_t* list, int value, int position) {
         cur = cur->next;
     } 
     // when reaching here, cur is the previous node of targeted position
+    newNode->prev = cur;
     newNode->next = cur->next;
+    cur->next->prev = newNode;
     cur->next = newNode;
     list->size++;
 }
 
 // delete the element at the head
-void deleteHead(slist_t* list) {
+void deleteHead(dlist_t* list) {
     if(list->head == NULL) {
         printf("Linked list is already empty\n");
         return;
@@ -109,6 +119,11 @@ void deleteHead(slist_t* list) {
 
     node_t* temp = list->head;
     list->head = list->head->next;
+
+    if(list->head != NULL) {
+        list->head->prev = NULL;
+    }
+
     free(temp);
     list->size--;
 
@@ -118,32 +133,28 @@ void deleteHead(slist_t* list) {
 }
 
 // delete the element at the tail
-void deleteTail(slist_t* list) {
+void deleteTail(dlist_t* list) {
     if(list->head == NULL) {
         printf("Linked list is already empty\n");
         return;
     }
-    node_t* cur = list->head;
-    node_t* prev = NULL;
-    while(cur->next != NULL) {
-        prev = cur;
-        cur = cur->next;
+    node_t* cur = list->tail;
+    list->tail = cur->prev;
+
+    if(list->tail != NULL) {
+        list->tail->next = NULL;
     }
-    // when reaching here, cur is the last node, which should be deleted
-    // prev is the second last node, which should become the last
-    if(prev == NULL) {
-        list->head = NULL;
-        list->tail = NULL;
-    } else {
-        prev->next = NULL;
-        list->tail = prev;
-    }
+
     free(cur);
     list->size--;
+
+    if(list->tail == NULL) {
+        list->head = NULL;
+    }
 }
 
 // delete the element in the middle 
-void deleteMiddle(slist_t* list, int position) {
+void deleteMiddle(dlist_t* list, int position) {
     if(position > list->size || position < 1) {
         printf("Invalid position\n");
         return;
@@ -157,38 +168,38 @@ void deleteMiddle(slist_t* list, int position) {
         return;
     }
     node_t* cur = list->head;
-    for(int i=1; i<position-1; i++) {
+    for(int i=1; i<position; i++) {
         cur = cur->next;
     }
-    // when reaching here, cur is the prev node of targeted position
-    node_t* temp = cur->next;
-    cur->next = temp->next;
-    free(temp);
+    // when reaching here, cur is the targeted position
+    cur->prev->next = cur->next;
+    cur->next->prev = cur->prev;
+    free(cur);
     list->size--;
 }
 
-void printList(slist_t* list) {
-    node_t* cur = list->head;
+void printList(dlist_t* list) {
+    node_t* cur = list->tail;
     while(cur != NULL) {
         printf("%d ", cur->value);
-        cur = cur->next;
+        cur = cur->prev;
     }
     printf("\n");
 }
 
 int main() {
-    slist_t* list1 = makeSlist();
+    dlist_t* list1 = makeDlist();
     insertHead(list1, 23);
-    insertMiddle(list1, 52, 2);
-    insertMiddle(list1, 19, 3);
-    insertMiddle(list1, 9, 4);
+    insertMiddle(list1,52, 2);
+    insertMiddle(list1,19, 3);
+    insertMiddle(list1,9, 4);
     insertMiddle(list1, 100, 5);
     printList(list1);
 
     printf("Searching for 52, at position: %d\n", search(list1, 52));
     printf("Searching for 500, at position: %d\n", search(list1, 500));
 
-    printf("Original singly linked list: ");
+    printf("Original doubly linked list: ");
     printList(list1);
 
     insertMiddle(list1, 7, 3);
